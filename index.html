@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="uk" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TASoft — Розробка та супровід ПЗ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: dark; --brand1:#22d3ee; --brand2:#2563eb; }
+  *{ font-family:'Satoshi','Inter',system-ui,sans-serif; }
+  body{ background:#000; color:#fff; overflow-x:hidden; }
+  h1,h2,h3,.display{ font-family:'Clash Display','Satoshi',sans-serif; letter-spacing:-.02em; }
+
+  /* Surfaces */
+  .glass{ background:linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.02) 65%); border:1px solid rgba(255,255,255,.10); box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 8px 32px 0 rgba(0,0,0,.36); }
+  .glass-hover{ transition:transform .35s cubic-bezier(.2,.8,.2,1), background .35s, border-color .35s; }
+  .glass-hover:hover{ background:linear-gradient(160deg,rgba(255,255,255,.13),rgba(255,255,255,.04) 65%); border-color:rgba(255,255,255,.2); transform:translateY(-5px); }
+  #nav .glass{ backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
+  .text-gradient{ background:linear-gradient(90deg,#fff,rgba(255,255,255,.82),rgba(255,255,255,.55)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .text-brand{ background:linear-gradient(90deg,#67e8f9,#38bdf8,#2563eb); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .bg-brand{ background:linear-gradient(90deg,#22d3ee,#2563eb); }
+
+  /* Ambient background */
+  .grid-bg{ position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+    background-size:64px 64px; mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 30%,transparent 75%); }
+  .noise{ position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.04; mix-blend-mode:overlay; }
+
+  @keyframes blob{0%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-50px) scale(1.1)}66%{transform:translate(-20px,20px) scale(.9)}100%{transform:translate(0,0) scale(1)}}
+  .animate-blob{ animation:blob 12s infinite; }
+  .delay-2000{ animation-delay:2s } .delay-4000{ animation-delay:4s }
+  @keyframes ping{75%,100%{transform:scale(2);opacity:0}}
+  .animate-ping{ animation:ping 1.6s cubic-bezier(0,0,.2,1) infinite; }
+
+  /* Reveal */
+  .reveal{ opacity:0; transform:translateY(30px); filter:blur(8px); transition:opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1), filter .8s; }
+  .reveal.in{ opacity:1; transform:none; filter:blur(0); }
+  .word{ display:inline-block; opacity:0; transform:translateY(110%) rotate(3deg); transition:opacity .7s, transform .7s cubic-bezier(.2,.85,.2,1); }
+  .word.in{ opacity:1; transform:none; }
+  .word-wrap{ display:inline-block; overflow:hidden; vertical-align:top; padding-bottom:.06em; }
+
+  html.lenis,html.lenis body{ height:auto } .lenis.lenis-smooth{ scroll-behavior:auto!important }
+
+  /* Custom cursor */
+  .cur{ position:fixed; top:0; left:0; width:14px; height:14px; border-radius:50%; background:#fff; pointer-events:none; z-index:90; mix-blend-mode:difference; transform:translate(-50%,-50%); transition:width .25s,height .25s,background .25s; }
+  .cur.big{ width:64px; height:64px; background:#fff; }
+  .cur-ring{ position:fixed; top:0; left:0; width:38px; height:38px; border:1px solid rgba(255,255,255,.4); border-radius:50%; pointer-events:none; z-index:90; transform:translate(-50%,-50%); transition:width .3s,height .3s,opacity .3s; }
+  @media (hover:none){ .cur,.cur-ring{ display:none } }
+
+  ::selection{ background:rgba(34,211,238,.25); }
+  .nav-scrolled{ padding-top:.6rem!important; padding-bottom:.6rem!important; }
+  .scroll-hint{ pointer-events:none; }
+  @media (max-height:820px){ .scroll-hint{ display:none!important; } }
+  #toTop{ position:fixed; right:24px; bottom:24px; width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; z-index:70; cursor:pointer; color:#fff; transform:translateX(120px); opacity:0; transition:transform .45s cubic-bezier(.2,.85,.2,1), opacity .45s, background .3s, border-color .3s; }
+  #toTop.show{ transform:translateX(0); opacity:1; }
+  #toTop:hover{ transform:translateX(0) translateY(-4px); }
+  #toTop svg{ transition:transform .3s; }
+  #toTop:hover svg{ transform:translateY(-2px); }
+  #progress{ position:fixed; top:0; left:0; height:3px; width:0; z-index:80; background:linear-gradient(90deg,#22d3ee,#2563eb); }
+
+  /* Intro */
+  #intro{ position:fixed; inset:0; z-index:100; background:#000; display:flex; align-items:center; justify-content:center; transition:opacity .5s ease, visibility .5s; }
+  #intro.hide{ opacity:0; visibility:hidden; }
+  #intro .lg{ font-family:'Clash Display'; font-weight:700; font-size:clamp(2.5rem,8vw,5rem); letter-spacing:.02em; }
+  .intro-rise{ display:inline-block; opacity:0; transform:translateY(120%); animation:rise .8s cubic-bezier(.2,.85,.2,1) forwards; }
+  .intro-wrap{ display:inline-block; overflow:hidden; vertical-align:top; }
+  @keyframes rise{to{opacity:1;transform:none}}
+
+  .marquee{ display:flex; gap:3rem; white-space:nowrap; animation:scrollx 28s linear infinite; }
+  @keyframes scrollx{to{transform:translateX(-50%)}}
+
+  .field{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:14px 18px; width:100%; color:#fff; transition:border-color .25s, background .25s; }
+  .field:focus{ outline:none; border-color:#22d3ee; background:rgba(255,255,255,.06); }
+  .field::placeholder{ color:rgba(255,255,255,.4); }
+  .pill{ padding:8px 16px; border-radius:999px; border:1px solid rgba(255,255,255,.14); font-size:14px; cursor:pointer; transition:all .2s; }
+  .pill.active{ background:linear-gradient(90deg,#22d3ee,#2563eb); border-color:transparent; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none!important; transition:none!important; }
+    .reveal,.word{ opacity:1!important; transform:none!important; filter:none!important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="intro"><div class="lg">TA<span class="text-brand">SOFT</span></div></div>
+
+<!-- AMBIENT -->
+<svg class="noise"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>
+<div id="progress"></div>
+<div class="cur"></div><div class="cur-ring"></div>
+
+<!-- NAVBAR -->
+<nav id="nav" class="fixed top-0 left-0 right-0 z-50 px-6 py-6 transition-all duration-300">
+  <div class="max-w-7xl mx-auto rounded-full flex items-center justify-between px-6 py-3 glass" style="background:rgba(0,0,0,.45)">
+    <a href="#" class="text-2xl font-bold tracking-wide" data-cursor>TA<span class="text-brand">SOFT</span></a>
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#services" class="navlink text-sm font-medium text-white/75 hover:text-white transition-colors" data-i="nav.services"></a>
+      <a href="#process" class="navlink text-sm font-medium text-white/75 hover:text-white transition-colors" data-i="nav.process"></a>
+      <a href="#about" class="navlink text-sm font-medium text-white/75 hover:text-white transition-colors" data-i="nav.about"></a>
+      <a href="#contact" class="navlink text-sm font-medium text-white/75 hover:text-white transition-colors" data-i="nav.contact"></a>
+      <div class="flex items-center rounded-full border border-white/10 p-0.5 text-xs font-semibold">
+        <button data-lang="uk" class="lang-btn px-3 py-1 rounded-full uppercase">uk</button>
+        <button data-lang="en" class="lang-btn px-3 py-1 rounded-full uppercase">en</button>
+      </div>
+      <a href="#contact" class="magnetic bg-brand text-white px-5 py-2 rounded-full text-sm font-semibold" data-cursor data-i="nav.cta"></a>
+    </div>
+    <div class="flex items-center gap-3 md:hidden">
+      <div class="flex items-center rounded-full border border-white/10 p-0.5 text-xs font-semibold">
+        <button data-lang="uk" class="lang-btn px-3 py-1 rounded-full uppercase">uk</button>
+        <button data-lang="en" class="lang-btn px-3 py-1 rounded-full uppercase">en</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+  <canvas id="hero-canvas" class="absolute inset-0 w-full h-full z-0 pointer-events-none" style="-webkit-mask-image:radial-gradient(ellipse 100% 85% at 50% 50%,#000 60%,transparent 100%);mask-image:radial-gradient(ellipse 100% 85% at 50% 50%,#000 60%,transparent 100%);"></canvas>
+  <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="parallax absolute top-[-10%] left-[-10%] w-[48vw] h-[48vw] bg-cyan-500/15 rounded-full blur-[130px] animate-blob" data-speed="0.2"></div>
+    <div class="parallax absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] bg-blue-600/15 rounded-full blur-[130px] animate-blob delay-2000" data-speed="0.35"></div>
+    <div class="parallax absolute bottom-[-10%] left-[20%] w-[44vw] h-[44vw] bg-sky-500/12 rounded-full blur-[130px] animate-blob delay-4000" data-speed="0.5"></div>
+  </div>
+  <div class="container mx-auto px-6 relative z-10 text-center">
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8 reveal">
+      <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span></span>
+      <span class="text-xs font-medium text-white/85 uppercase tracking-wider" data-i="hero.badge"></span>
+    </div>
+    <h1 class="text-[2.1rem] sm:text-5xl md:text-6xl lg:text-8xl font-bold mb-8 leading-[1.08] break-words">
+      <span class="split text-gradient block" data-i="hero.title1"></span>
+      <span class="split text-brand block" data-i="hero.title2"></span>
+    </h1>
+    <p class="text-lg md:text-xl text-white/70 max-w-2xl mx-auto mb-12 leading-relaxed reveal" data-i="hero.subtitle"></p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 reveal">
+      <a href="#contact" class="magnetic px-8 py-4 bg-brand text-white rounded-full font-semibold text-lg hover:scale-105 transition-transform" style="box-shadow:0 0 50px -8px rgba(34,211,238,.55)" data-cursor data-i="hero.cta1"></a>
+      <a href="#services" class="magnetic px-8 py-4 glass rounded-full font-semibold text-lg text-white hover:bg-white/10 transition-all" data-cursor data-i="hero.cta2"></a>
+    </div>
+  </div>
+  <div class="scroll-hint absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-10">
+    <span class="text-xs text-white/45 uppercase tracking-widest" data-i="hero.scroll"></span>
+    <div class="w-px h-10 bg-gradient-to-b from-white/0 via-white/45 to-white/0"></div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="relative py-6 border-y border-white/5 overflow-hidden">
+  <div class="marquee text-2xl md:text-3xl font-semibold text-white/15" id="marquee"></div>
+</div>
+
+<!-- SERVICES (bento) -->
+<section id="services" class="py-20 md:py-32 relative z-10">
+  <div class="container mx-auto px-6">
+    <div class="mb-16 max-w-3xl">
+      <span class="text-sm font-semibold uppercase tracking-widest text-cyan-400 reveal" data-i="services.kicker"></span>
+      <h2 class="text-4xl md:text-5xl font-bold mt-4 mb-6 reveal" data-i="services.title"></h2>
+      <p class="text-lg text-white/65 leading-relaxed reveal" data-i="services.subtitle"></p>
+      <div class="h-1 w-[100px] bg-gradient-to-r from-cyan-400 to-blue-600 rounded-full mt-8 reveal"></div>
+    </div>
+    <div id="svc-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 auto-rows-[minmax(150px,auto)] sm:auto-rows-[200px]"></div>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section id="process" class="py-20 md:py-32 relative z-10 overflow-hidden">
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70vw] h-[70vw] bg-blue-900/10 rounded-full blur-[150px] pointer-events-none"></div>
+  <div class="container mx-auto px-6 relative z-10">
+    <div class="mb-16 max-w-3xl">
+      <span class="text-sm font-semibold uppercase tracking-widest text-cyan-400 reveal" data-i="process.kicker"></span>
+      <h2 class="text-4xl md:text-5xl font-bold mt-4 mb-6 reveal" data-i="process.title"></h2>
+      <p class="text-lg text-white/65 leading-relaxed reveal" data-i="process.subtitle"></p>
+    </div>
+    <div id="process-grid" class="grid md:grid-cols-2 lg:grid-cols-4 gap-5"></div>
+  </div>
+</section>
+
+<!-- ABOUT + STATS -->
+<section id="about" class="py-20 md:py-32 relative z-10 overflow-hidden">
+  <div class="container mx-auto px-6 relative z-10">
+    <div class="grid lg:grid-cols-2 gap-16 items-center">
+      <div>
+        <span class="text-sm font-semibold uppercase tracking-widest text-cyan-400 reveal" data-i="about.kicker"></span>
+        <h2 class="text-4xl md:text-5xl font-bold mt-4 mb-6 reveal" data-i="about.title"></h2>
+        <p class="text-lg text-white/70 leading-relaxed reveal mb-6" data-i="about.text"></p>
+        <div class="flex flex-wrap gap-3 reveal" id="kved-chips"></div>
+      </div>
+      <div id="stats-grid" class="grid grid-cols-2 gap-5"></div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST / TESTIMONIALS -->
+<section id="trust" class="py-20 md:py-32 relative z-10 overflow-hidden">
+  <div class="container mx-auto px-6 relative z-10">
+    <div class="text-center max-w-3xl mx-auto mb-14">
+      <span class="text-sm font-semibold uppercase tracking-widest text-cyan-400 reveal" data-i="trust.kicker"></span>
+      <h2 class="text-4xl md:text-5xl font-bold mt-4 reveal" data-i="trust.title"></h2>
+    </div>
+    <div id="logos" class="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 mb-16 opacity-60"></div>
+    <div id="quotes" class="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto"></div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact" class="py-20 md:py-32 relative z-10 overflow-hidden">
+  <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-gradient-to-t from-blue-900/25 to-transparent pointer-events-none"></div>
+  <div class="container mx-auto px-6 relative z-10">
+    <div class="grid lg:grid-cols-2 gap-14 items-start max-w-5xl mx-auto">
+      <div>
+        <span class="text-sm font-semibold uppercase tracking-widest text-cyan-400 reveal" data-i="contact.kicker"></span>
+        <h2 class="text-4xl md:text-5xl font-bold mt-4 mb-6 reveal"><span data-i="contact.title1"></span> <span class="text-brand" data-i="contact.title2"></span></h2>
+        <p class="text-lg text-white/70 mb-10 reveal" data-i="contact.subtitle"></p>
+        <div class="space-y-4 reveal" id="contact-info"></div>
+      </div>
+      <form id="form" class="glass rounded-3xl p-6 sm:p-8 reveal space-y-5">
+        <div class="grid sm:grid-cols-2 gap-4">
+          <input class="field" name="name" data-ph="form.name" required>
+          <input class="field" name="company" data-ph="form.company">
+        </div>
+        <input class="field" name="email" type="email" data-ph="form.email" required>
+        <div>
+          <div class="text-sm text-white/55 mb-3" data-i="form.budget"></div>
+          <div class="flex flex-wrap gap-2" id="budget-pills"></div>
+        </div>
+        <textarea class="field" name="message" rows="4" data-ph="form.message"></textarea>
+        <button type="submit" class="magnetic bg-brand text-white w-full py-4 rounded-2xl font-bold text-lg hover:scale-[1.02] transition-transform" data-cursor data-i="form.submit"></button>
+        <div id="form-ok" class="hidden text-center py-3 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-300" data-i="form.success"></div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="relative pt-24 pb-12 overflow-hidden z-10">
+  <div class="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+  <div class="container mx-auto px-6 relative z-10">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+      <div>
+        <a href="#" class="text-2xl font-bold tracking-wide mb-5 block" data-cursor>TA<span class="text-brand">SOFT</span></a>
+        <p class="text-white/55 leading-relaxed max-w-xs" data-i="footer.tagline"></p>
+      </div>
+      <div>
+        <h4 class="font-semibold mb-6" data-i="footer.company"></h4>
+        <ul class="space-y-4 text-white/65">
+          <li><a href="#services" class="hover:text-white transition-colors" data-i="nav.services"></a></li>
+          <li><a href="#process" class="hover:text-white transition-colors" data-i="nav.process"></a></li>
+          <li><a href="#about" class="hover:text-white transition-colors" data-i="nav.about"></a></li>
+          <li><a href="#contact" class="hover:text-white transition-colors" data-i="nav.contact"></a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-semibold mb-6" data-i="nav.contact"></h4>
+        <ul class="space-y-4 text-white/65">
+          <li><a href="tel:+380630652456" class="hover:text-white transition-colors">+380 63 065 2456</a></li>
+          <li><a href="mailto:info@tasoft.dev" class="hover:text-white transition-colors">info@tasoft.dev</a></li>
+          <li data-i="contact.addressVal"></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-semibold mb-6" data-i="footer.legal"></h4>
+        <ul class="space-y-4 text-white/65 text-sm">
+          <li id="f-name"></li><li id="f-edrpou"></li><li>КВЕД 62.01</li>
+        </ul>
+      </div>
+    </div>
+    <div class="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-white/5 text-sm text-white/45">
+      <p id="f-copy"></p><p id="f-loc" class="mt-3 md:mt-0"></p>
+    </div>
+  </div>
+</footer>
+
+<!-- Back to top -->
+<button id="toTop" class="glass" aria-label="Наверх" data-cursor>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+<script>
+const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const D = {
+  "nav.services":["Послуги","Services"],"nav.process":["Процес","Process"],"nav.about":["Про нас","About"],"nav.contact":["Контакти","Contacts"],"nav.cta":["Зв'язатися","Get in touch"],
+  "hero.badge":["В IT з 2021 року","In IT since 2021"],
+  "hero.title1":["Розробка та супровід","Software development"],
+  "hero.title2":["програмного забезпечення","& reliable support"],
+  "hero.subtitle":["TASoft створює, модернізує та підтримує програмне забезпечення, на яке можна покластися. Стабільність, швидке реагування й технічна експертиза для вашого бізнесу.","TASoft builds, modernises and maintains software you can rely on. Stability, fast response and deep technical expertise for your business."],
+  "hero.cta1":["Обговорити проєкт","Discuss a project"],"hero.cta2":["Наші послуги","Our services"],"hero.scroll":["Гортайте","Scroll"],
+  "services.kicker":["Що ми робимо","What we do"],
+  "services.title":["Модернізація та системний супровід ПЗ","Software modernisation & system support"],
+  "services.subtitle":["Повний цикл підтримки програмного забезпечення — від оперативного усунення помилок до модифікацій, зумовлених змінами законодавства.","A full cycle of software support — from rapid bug fixing to modifications driven by changing legislation."],
+  "process.kicker":["Як ми працюємо","How we work"],"process.title":["Чіткий процес від ідеї до супроводу","A clear process from idea to support"],
+  "process.subtitle":["Прозорі етапи, передбачуваний результат і відповідальність на кожному кроці.","Transparent stages, predictable outcomes and ownership at every step."],
+  "about.kicker":["Про компанію","About the company"],"about.title":["Надійний партнер у супроводі ПЗ","A reliable software support partner"],
+  "about.text":["ТОВ «ТАСОФТ» — українська ІТ-компанія, заснована у 2021 році. Ми спеціалізуємося на розробці, модернізації та системному супроводі програмного забезпечення, допомагаючи бізнесу залишатися стабільним і відповідати вимогам часу.","TASoft LLC is a Ukrainian IT company founded in 2021. We specialise in development, modernisation and system support of software, helping businesses stay stable and keep pace with change."],
+  "trust.kicker":["Нам довіряють","Trusted by"],"trust.title":["Результат, який говорить сам за себе","Results that speak for themselves"],
+  "contact.kicker":["Контакти","Contacts"],"contact.title1":["Готові обговорити","Ready to discuss"],"contact.title2":["ваш проєкт?","your project?"],
+  "contact.subtitle":["Залиште заявку — і ми зв'яжемося протягом одного робочого дня з пропозицією під вашу задачу.","Leave a request and we'll get back within one business day with a tailored proposal."],
+  "contact.addressVal":["м. Київ, вул. Велика Васильківська","Kyiv, Velyka Vasylkivska St."],
+  "form.name":["Ваше ім'я","Your name"],"form.company":["Компанія","Company"],"form.email":["Email","Email"],
+  "form.budget":["Орієнтовний бюджет","Estimated budget"],"form.message":["Коротко про задачу…","Briefly about your task…"],
+  "form.submit":["Надіслати заявку","Send request"],"form.success":["Дякуємо! Заявку надіслано — ми скоро зв'яжемося.","Thank you! Your request has been sent — we'll be in touch soon."],
+  "footer.tagline":["Розробка, модернізація та супровід програмного забезпечення.","Software development, modernisation and support."],
+  "footer.company":["Компанія","Company"],"footer.legal":["Реквізити","Legal"],"footer.rights":["Усі права захищено.","All rights reserved."]
+};
+const SVC = [
+  ["⚙️","Підтримання працездатності","Keeping systems operational","Стабільна робота ПЗ протягом усього життєвого циклу.","Reliable operation across the whole lifecycle.","col-span-2 row-span-2",true],
+  ["⚡","Оперативне усунення збоїв","Rapid incident response","Швидко усуваємо помилки та недоліки в експлуатації.","We rapidly resolve faults found in operation.","",false],
+  ["🐞","Виправлення помилок","Bug fixing","Зміни до програм без зміни алгоритмів рішень.","Changes without altering core algorithms.","",false],
+  ["🔄","Модифікація ПЗ","Software modification","Зміни в алгоритмах, зокрема зі змінами законодавства.","Changes incl. legal updates.","col-span-2",false],
+  ["🔎","Аналіз експлуатації","Operational analysis","Аналізуємо роботу й виявляємо точки покращення.","We analyse and pinpoint improvements.","",false],
+  ["🎓","Консультації персоналу","Staff consulting","Навчаємо персонал ефективно користуватися ПЗ.","We train staff to use software effectively.","",false],
+  ["🧮","Нестандартні розрахунки","Custom calculations","Виконуємо нестандартні розрахунки під задачі.","Non-standard calculations for your needs.","",false],
+  ["🖥️","Системне та офісне ПЗ","System & office software","Встановлення, налагодження та супровід.","Installation, setup and support.","",false],
+  ["🎧","Інфо-консультаційні послуги","Information & consulting","Підтримка з ІТ-питань вашого бізнесу.","Support on your IT matters.","",false],
+  ["🛡️","Антивірусний захист","Antivirus protection","Захист робочих станцій і серверів.","Protection for workstations & servers.","",false]
+];
+const PROC = [
+  ["01","Аналіз","Discovery","Занурюємось у задачу, фіксуємо вимоги й ризики.","We dive into the task, capture requirements and risks."],
+  ["02","Розробка","Development","Проєктуємо й пишемо чистий, масштабований код.","We design and write clean, scalable code."],
+  ["03","Впровадження","Delivery","Розгортаємо, тестуємо й навчаємо команду.","We deploy, test and onboard your team."],
+  ["04","Супровід","Support","Підтримуємо, модернізуємо й оперативно реагуємо.","We maintain, modernise and respond fast."]
+];
+const STATS = [["2021","Рік заснування","Founded",0],["4","Роки на ринку","Years in business","+"],["10","Напрямів послуг","Service areas","+"],["100","Зосередженість на клієнті","Client focus","%"]];
+const KVED = ["62.01","58.29","58.21","62.02"];
+const LOGOS = ["Tascombank","TASAgro","TASlife"];
+const QUOTES = [
+  ["«Реагують швидко і по суті. За два роки супроводу — жодного критичного простою.»","\"Fast and to the point. Two years of support without a single critical downtime.\"","Фінансовий сектор","Financial sector"],
+  ["«Допомогли адаптувати систему під нові вимоги законодавства точно в строк.»","\"Helped us adapt the system to new legal requirements right on time.\"","Логістика","Logistics"]
+];
+const BUDGETS = ["< $5k","$5–15k","$15–50k","> $50k"];
+
+let lang = 0;
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+function build(){
+  $('#svc-grid').innerHTML = SVC.map((s,i)=>`
+    <div class="reveal glass glass-hover rounded-3xl p-6 ${s[5]} flex flex-col justify-between ${s[6]?'bg-gradient-to-br from-cyan-500/10 to-blue-600/5':''}" data-cursor style="transition-delay:${(i%4)*60}ms">
+      <div class="text-3xl">${s[0]}</div>
+      <div><h3 class="${s[6]?'text-2xl':'text-lg'} font-semibold mb-2 tt" data-i1="${s[1]}" data-i2="${s[2]}"></h3>
+      <p class="text-white/60 text-sm leading-relaxed dd" data-i1="${s[3]}" data-i2="${s[4]}"></p></div>
+    </div>`).join('');
+  $('#process-grid').innerHTML = PROC.map((p,i)=>`
+    <div class="reveal glass glass-hover rounded-3xl p-7 relative" style="transition-delay:${i*80}ms" data-cursor>
+      <div class="text-5xl font-bold text-white/10 mb-4 display">${p[0]}</div>
+      <h3 class="text-xl font-semibold mb-2 tt" data-i1="${p[1]}" data-i2="${p[2]}"></h3>
+      <p class="text-white/60 text-sm leading-relaxed dd" data-i1="${p[3]}" data-i2="${p[4]}"></p>
+    </div>`).join('');
+  $('#stats-grid').innerHTML = STATS.map((s,i)=>`
+    <div class="reveal glass rounded-3xl p-8 text-center" style="transition-delay:${i*70}ms">
+      <div class="text-5xl font-bold text-brand mb-2"><span class="num" data-to="${s[0]}" data-suf="${s[3]||''}">0</span></div>
+      <div class="text-sm text-white/55 uppercase tracking-wide tt" data-i1="${s[1]}" data-i2="${s[2]}"></div>
+    </div>`).join('');
+  $('#kved-chips').innerHTML = KVED.map(k=>`<span class="text-xs font-mono px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70">КВЕД ${k}</span>`).join('');
+  $('#logos').innerHTML = LOGOS.map(l=>`<span class="text-2xl font-bold tracking-tight display">${l}</span>`).join('');
+  $('#quotes').innerHTML = QUOTES.map((q,i)=>`
+    <div class="reveal glass rounded-3xl p-8" style="transition-delay:${i*80}ms">
+      <div class="text-4xl text-cyan-400/40 mb-3 leading-none">"</div>
+      <p class="text-lg text-white/85 mb-5 qt" data-i1='${q[0]}' data-i2='${q[1]}'></p>
+      <div class="text-sm text-white/45 qa" data-i1="${q[2]}" data-i2="${q[3]}"></div>
+    </div>`).join('');
+  $('#contact-info').innerHTML = [
+    ["📞","+380 63 065 2456","tel:+380630652456"],
+    ["✉️","info@tasoft.dev","mailto:info@tasoft.dev"],
+    ["📍","__addr__",null]
+  ].map(c=>{
+    const v = c[1]==='__addr__' ? `<span data-i="contact.addressVal"></span>` : c[1];
+    const row = `<div class="flex items-center gap-4 glass rounded-2xl px-5 py-4"><span class="text-xl">${c[0]}</span><span class="text-white/85">${v}</span></div>`;
+    return c[2] ? `<a href="${c[2]}" data-cursor class="block">${row}</a>` : row;
+  }).join('');
+  $('#budget-pills').innerHTML = BUDGETS.map((b,i)=>`<span class="pill ${i===1?'active':''}" data-cursor>${b}</span>`).join('');
+  const m = "Computer Programming • Software Support • IT Consulting • Game Publishing • Modernisation • ";
+  $('#marquee').innerHTML = `<span>${m.repeat(2)}</span><span>${m.repeat(2)}</span>`;
+}
+
+function splitWords(el,text){
+  el.innerHTML = text.split(' ').map(w=>`<span class="word-wrap"><span class="word">${w}</span></span>`).join(' ');
+}
+function applyLang(){
+  document.documentElement.lang = lang===0?'uk':'en';
+  $$('[data-i]').forEach(el=>{ const k=el.getAttribute('data-i'); if(D[k]) el.textContent=D[k][lang]; });
+  $$('[data-ph]').forEach(el=>{ const k=el.getAttribute('data-ph'); if(D[k]) el.placeholder=D[k][lang]; });
+  $$('.tt').forEach(el=> el.textContent = lang===0?el.dataset.i1:el.dataset.i2);
+  $$('.dd').forEach(el=> el.textContent = lang===0?el.dataset.i1:el.dataset.i2);
+  $$('.qt').forEach(el=> el.textContent = lang===0?el.dataset.i1:el.dataset.i2);
+  $$('.qa').forEach(el=> el.textContent = lang===0?el.dataset.i1:el.dataset.i2);
+  $$('.split').forEach(el=>{ const k=el.getAttribute('data-i'); splitWords(el, D[k][lang]); if(el.closest('.in')||el.classList.contains('seen')) revealWords(el); });
+  const fn = lang===0?'ТОВ «ТАСОФТ»':'TASOFT LLC';
+  $('#f-name').textContent=fn; $('#f-edrpou').textContent=(lang===0?'ЄДРПОУ':'EDRPOU')+': 44454047';
+  $('#f-copy').textContent=`© 2026 ${fn}. ${D['footer.rights'][lang]}`;
+  $('#f-loc').textContent=lang===0?'м. Київ, Україна':'Kyiv, Ukraine';
+  $$('.lang-btn').forEach(b=>{ const a=(b.dataset.lang==='uk'&&lang===0)||(b.dataset.lang==='en'&&lang===1); b.className='lang-btn px-3 py-1 rounded-full uppercase transition-colors '+(a?'bg-white text-black':'text-white/60 hover:text-white'); });
+}
+function revealWords(el){ el.querySelectorAll('.word').forEach((w,i)=>{ setTimeout(()=>w.classList.add('in'), 60*i); }); }
+
+function countUp(el){
+  const to=parseFloat(el.dataset.to), suf=el.dataset.suf||''; let cur=0; const dur=1400, t0=performance.now();
+  function step(t){ const p=Math.min((t-t0)/dur,1); const e=1-Math.pow(1-p,3); el.textContent=Math.round(to*e)+suf; if(p<1) requestAnimationFrame(step); }
+  requestAnimationFrame(step);
+}
+
+function heroCanvas(){
+  if(RM) return;
+  const c=$('#hero-canvas'), x=c.getContext('2d'); const dpr=Math.min(devicePixelRatio||1,2);
+  let w=0,h=0,pts=[]; const mouse={x:-9999,y:-9999};
+  function size(){
+    w=c.clientWidth||c.offsetWidth||window.innerWidth; h=c.clientHeight||c.offsetHeight||window.innerHeight;
+    c.width=w*dpr; c.height=h*dpr; x.setTransform(dpr,0,0,dpr,0,0);
+    if(!pts.length && w>10 && h>10){ const N=Math.max(26,Math.min(w<640?42:110,Math.round(w*h/12500)));
+      for(let i=0;i<N;i++) pts.push({x:Math.random()*w,y:Math.random()*h,bx:(Math.random()-.5)*.22,by:(Math.random()-.5)*.22,vx:0,vy:0}); }
+  }
+  size(); window.addEventListener('resize',size); window.addEventListener('load',size);
+  window.addEventListener('mousemove',e=>{ const r=c.getBoundingClientRect(); mouse.x=e.clientX-r.left; mouse.y=e.clientY-r.top; });
+  window.addEventListener('mouseleave',()=>{ mouse.x=-9999; mouse.y=-9999; });
+  const LINK=130, R=160;
+  function loop(){
+    x.clearRect(0,0,w,h);
+    // Move: gentle base drift + repulsion away from the cursor with friction
+    for(const p of pts){
+      const dx=p.x-mouse.x, dy=p.y-mouse.y, d=Math.hypot(dx,dy);
+      if(d<R && d>0.5){ const f=(1-d/R)*1.2; p.vx+=(dx/d)*f; p.vy+=(dy/d)*f; }
+      p.vx*=0.92; p.vy*=0.92;
+      p.x+=p.vx+p.bx; p.y+=p.vy+p.by;
+      if(p.x<0||p.x>w) p.bx*=-1;
+      if(p.y<0||p.y>h) p.by*=-1;
+      p.x=Math.max(0,Math.min(w,p.x)); p.y=Math.max(0,Math.min(h,p.y));
+    }
+    // Links between nearby particles
+    for(let i=0;i<pts.length;i++){
+      const a=pts[i];
+      for(let j=i+1;j<pts.length;j++){ const b=pts[j],dd=Math.hypot(a.x-b.x,a.y-b.y);
+        if(dd<LINK){ x.strokeStyle=`rgba(56,189,248,${.22*(1-dd/LINK)})`; x.lineWidth=1; x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke(); } }
+    }
+    // Nodes: glow brighter the closer they are to the cursor
+    for(const p of pts){
+      const dm=Math.hypot(p.x-mouse.x,p.y-mouse.y), near=dm<R;
+      x.fillStyle = near ? `rgba(165,243,252,${.4+.5*(1-dm/R)})` : 'rgba(103,232,249,.6)';
+      x.beginPath(); x.arc(p.x,p.y, near?2.4:1.6, 0,7); x.fill();
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  build(); applyLang(); heroCanvas();
+  // intro
+  const intro=$('#intro');
+  intro.querySelector('.lg').innerHTML = '<span class="intro-wrap"><span class="intro-rise" style="animation-delay:.05s">TA</span></span><span class="intro-wrap"><span class="intro-rise" style="animation-delay:.16s;color:#38bdf8">SOFT</span></span>';
+  setTimeout(()=>intro.classList.add('hide'), RM?80:850);
+
+  $$('.lang-btn').forEach(b=> b.addEventListener('click',()=>{ lang=b.dataset.lang==='uk'?0:1; applyLang(); }));
+
+  // reveal observer
+  const io=new IntersectionObserver(es=>{ es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); if(e.target.classList.contains('split')){e.target.classList.add('seen');revealWords(e.target);} e.target.querySelectorAll&&e.target.querySelectorAll('.num').forEach(countUp); io.unobserve(e.target);} }); },{threshold:.15});
+  $$('.reveal,.split').forEach(el=>io.observe(el));
+  $$('.num').forEach(n=>{ const ob=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){countUp(e.target);ob.unobserve(e.target);}})},{threshold:.5}); ob.observe(n); });
+
+  // Lenis smooth scroll
+  if(!RM && window.Lenis){
+    const lenis=new Lenis({duration:1.1,smoothWheel:true}); window.__lenis=lenis;
+    function raf(t){ lenis.raf(t); requestAnimationFrame(raf); } requestAnimationFrame(raf);
+    $$('a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{ const id=a.getAttribute('href'); if(id.length>1){ e.preventDefault(); lenis.scrollTo(id,{offset:-80}); } }));
+  }
+
+  // progress + navbar + parallax
+  const prog=$('#progress'), nav=$('#nav');
+  function onScroll(){ const sc=window.scrollY, max=document.body.scrollHeight-innerHeight; prog.style.width=(sc/max*100)+'%'; nav.classList.toggle('nav-scrolled',sc>50);
+    if(!RM) $$('.parallax').forEach(p=> p.style.transform=`translateY(${sc*parseFloat(p.dataset.speed)*-0.15}px)`); }
+  window.addEventListener('scroll',onScroll,{passive:true});
+
+  // custom cursor + magnetic
+  const cur=$('.cur'), ring=$('.cur-ring'); let mx=0,my=0,rx=0,ry=0;
+  window.addEventListener('mousemove',e=>{ mx=e.clientX; my=e.clientY; cur.style.left=mx+'px'; cur.style.top=my+'px'; });
+  function ringLoop(){ rx+=(mx-rx)*.18; ry+=(my-ry)*.18; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(ringLoop); } ringLoop();
+  $$('[data-cursor]').forEach(el=>{ el.addEventListener('mouseenter',()=>{cur.classList.add('big');ring.style.opacity=0;}); el.addEventListener('mouseleave',()=>{cur.classList.remove('big');ring.style.opacity=1;}); });
+  if(!RM) $$('.magnetic').forEach(el=>{
+    el.addEventListener('mousemove',e=>{ const r=el.getBoundingClientRect(); const dx=e.clientX-(r.left+r.width/2), dy=e.clientY-(r.top+r.height/2); el.style.transform=`translate(${dx*.3}px,${dy*.4}px)`; });
+    el.addEventListener('mouseleave',()=> el.style.transform='');
+  });
+
+  // back-to-top button
+  const toTop=$('#toTop');
+  if(toTop){
+    window.addEventListener('scroll',()=>{ toTop.classList.toggle('show', window.scrollY>600); },{passive:true});
+    toTop.addEventListener('click',()=>{ if(window.__lenis) window.__lenis.scrollTo(0,{duration:1}); else window.scrollTo({top:0,behavior:'smooth'}); });
+  }
+
+  // budget pills
+  $('#budget-pills').addEventListener('click',e=>{ if(e.target.classList.contains('pill')){ $$('#budget-pills .pill').forEach(p=>p.classList.remove('active')); e.target.classList.add('active'); } });
+  // form submit
+  $('#form').addEventListener('submit',e=>{ e.preventDefault(); if(!e.target.name.value||!e.target.email.value) return; $('#form-ok').classList.remove('hidden'); e.target.querySelector('button[type=submit]').style.display='none'; });
+});
+</script>
+</body>
+</html>
